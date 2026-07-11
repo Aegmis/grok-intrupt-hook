@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "bash|shell|exec|edit|write|create|str_replace|apply_patch|file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.grok/hooks/intrupt_hook.py",
+            "timeout": 630
+          }
+        ]
+      }
+    ]
+  }
+}

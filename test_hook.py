@@ -186,6 +186,27 @@ for desc, cmd, expect_blocked in HARD_CASES:
         print(f"       expected hard_blocked={expect_blocked}, got {hard_blocked}")
         print(f"       exit={result.returncode} stderr: {result.stderr.strip()!r}")
 
+# ── Protected-path WRITE gate (AEGMIS_PROTECTED_PATHS) ───────────────────────────
+PW_DIR = os.path.expanduser("~/proj/secrets")
+PW_ENV = {**TEST_ENV, "AEGMIS_FORWARD_ALL": "false", "AEGMIS_PROTECTED_PATHS": PW_DIR}
+PW_CASES = [
+    ("bash — touch INTO protected (gated)", f"touch {PW_DIR}/x",      True),
+    ("bash — > INTO protected (gated)",     f"echo hi > {PW_DIR}/a",  True),
+    ("bash — touch OUTSIDE (allowed)",      f"touch {os.path.expanduser('~/proj')}/free.txt", False),
+    ("bash — cat READ protected (allowed)", f"cat {PW_DIR}/x",        False),
+]
+for desc, cmd, expect_gated in PW_CASES:
+    result = subprocess.run([sys.executable, HOOK],
+        input=json.dumps({"cwd": os.path.expanduser("~/proj"),
+                          "tool_name": "bash", "tool_input": {"command": cmd}}),
+        capture_output=True, text=True, env=PW_ENV)
+    ok = ((result.returncode == 2) == expect_gated) and result.returncode in (0, 2)
+    pass_count += 1 if ok else 0
+    fail_count += 0 if ok else 1
+    print(f"[{'PASS' if ok else 'FAIL'}] {desc}")
+    if not ok:
+        print(f"       expected gated={expect_gated}, got exit={result.returncode}")
+
 print()
 print(f"Results: {pass_count}/{pass_count + fail_count} passed", end="")
 if fail_count:
